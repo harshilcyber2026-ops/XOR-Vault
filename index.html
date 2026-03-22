@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>XOR Reversing — FlagVault CTF</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>"/>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="#" class="nav-brand"><span class="bracket">[</span><span class="brand-flag">FLAG</span>VAULT<span class="bracket">]</span></a>
+  <ul class="nav-links">
+    <li><a href="#">Challenges</a></li>
+    <li><a href="#" class="active">XOR Rev</a></li>
+    <li><a href="#">Scoreboard</a></li>
+  </ul>
+  <div class="nav-status"><div class="status-dot"></div>CHALLENGE LIVE</div>
+</nav>
+
+<div class="page-wrap">
+
+  <header class="page-header" data-index="R1">
+    <div class="page-eyebrow">REVERSE ENGINEERING · CHALLENGE #R1</div>
+    <h1 class="page-title"><span class="hl2">XOR</span> <span class="hl">Vault</span></h1>
+    <p class="page-desc">
+      This small binary encrypts the flag using a single-byte XOR key.<br/>
+      Reverse it, find the key, and recover the plaintext.
+    </p>
+  </header>
+
+  <div class="stats-strip">
+    <div class="stat-box"><span class="stat-val">200</span><span class="stat-label">Points</span></div>
+    <div class="stat-box"><span class="stat-val amber">Easy</span><span class="stat-label">Difficulty</span></div>
+    <div class="stat-box"><span class="stat-val red">84</span><span class="stat-label">Solves</span></div>
+    <div class="stat-box"><span class="stat-val">Rev / Crypto</span><span class="stat-label">Category</span></div>
+  </div>
+
+  <!-- Download bar -->
+  <div class="download-bar">
+    <span class="dl-icon">⚙️</span>
+    <span class="dl-name">xor_me</span>
+    <span class="dl-size">15 KB · ELF 64-bit stripped binary · Linux x86-64</span>
+    <a href="files/xor_me" download class="btn btn-primary dl-btn">↓ Download Binary</a>
+  </div>
+
+  <div class="xrev-layout">
+
+    <!-- ══════ LEFT ══════ -->
+    <div class="xrev-left">
+
+      <!-- Binary interaction terminal -->
+      <div class="sec-divider"><h3>Binary Interaction</h3></div>
+      <div class="terminal-card">
+        <div class="tc-bar">
+          <span class="tc-dot tc-r"></span><span class="tc-dot tc-y"></span><span class="tc-dot tc-g"></span>
+          <span class="tc-title">./xor_me — simulated execution</span>
+          <span class="tc-note">runs locally or use emulator below</span>
+        </div>
+        <div class="terminal-body" id="terminal-body">
+          <div class="tb-line tb-dim">$ chmod +x xor_me && ./xor_me</div>
+          <div class="tb-line tb-banner">=== XOR Vault ===</div>
+          <div class="tb-line">Enter the XOR key (hex, e.g. 5a): <span class="cursor" id="cursor">█</span></div>
+        </div>
+        <div class="terminal-input-row">
+          <span class="ti-prompt">key&gt;</span>
+          <input class="ti-input" id="term-input" type="text" maxlength="2"
+                 placeholder="xx" autocomplete="off"
+                 oninput="this.value=this.value.replace(/[^0-9a-fA-F]/g,'').substring(0,2)"/>
+          <button class="btn btn-primary ti-btn" onclick="runBinary()">▶ Run</button>
+        </div>
+        <div class="terminal-presets">
+          <span class="tp-label">Try:</span>
+          <button class="tp-btn" onclick="setKey('00')">0x00</button>
+          <button class="tp-btn" onclick="setKey('41')">0x41 'A'</button>
+          <button class="tp-btn" onclick="setKey('ff')">0xFF</button>
+          <button class="tp-btn" onclick="setKey('20')">0x20 SPC</button>
+          <button class="tp-btn" onclick="setKey('5a')">0x5A 'Z'</button>
+        </div>
+      </div>
+
+      <!-- Static analysis view -->
+      <div class="sec-divider"><h3>Static Analysis — Disassembly View</h3></div>
+      <div class="disasm-card">
+        <div class="dasm-tabs">
+          <button class="dasm-tab active" onclick="switchTab('strings')">📝 strings</button>
+          <button class="dasm-tab" onclick="switchTab('hexdump')">🔢 hexdump</button>
+          <button class="dasm-tab" onclick="switchTab('pseudo')">📄 pseudocode</button>
+          <button class="dasm-tab" onclick="switchTab('entropy')">📊 entropy</button>
+        </div>
+
+        <!-- Strings output -->
+        <div class="dasm-panel active" id="panel-strings">
+          <div class="dasm-label">// strings xor_me | grep -v '^.'</div>
+          <div class="dasm-content">
+            <div class="ds-line ds-dim">$ strings ./xor_me</div>
+            <div class="ds-line ds-str">=== XOR Vault ===</div>
+            <div class="ds-line ds-str">Enter the XOR key (hex, e.g. 5a): </div>
+            <div class="ds-line ds-str">Error reading input.</div>
+            <div class="ds-line ds-str">Invalid key. Enter a hex byte (00-ff).</div>
+            <div class="ds-line ds-str">[*] Trying key: 0x%02x ('%c')</div>
+            <div class="ds-line ds-str">[*] Decrypted:  </div>
+            <div class="ds-line ds-hi">[+] Output looks like printable ASCII — that might be your flag!</div>
+            <div class="ds-line ds-str">[-] Output has non-printable bytes — wrong key?</div>
+            <div class="ds-line ds-dim">/lib64/ld-linux-x86-64.so.2</div>
+            <div class="ds-line ds-dim">libc.so.6</div>
+            <div class="ds-note">// No plaintext flag found in strings — it's encrypted!</div>
+          </div>
+        </div>
+
+        <!-- Hexdump -->
+        <div class="dasm-panel" id="panel-hexdump">
+          <div class="dasm-label">// xxd xor_me | grep -A2 "encrypted data"</div>
+          <div class="dasm-content" id="hexdump-content">
+            <!-- generated by JS -->
+          </div>
+        </div>
+
+        <!-- Pseudocode -->
+        <div class="dasm-panel" id="panel-pseudo">
+          <div class="dasm-label">// Ghidra / IDA decompilation (simplified)</div>
+          <div class="dasm-content">
+            <div class="ds-line ds-dim">// Identified encrypted buffer in .rodata</div>
+            <div class="ds-line ds-kw">unsigned char <span class="ds-var">enc</span>[] = {</div>
+            <div class="ds-line ds-bytes" id="pseudo-bytes">  <!-- generated by JS --></div>
+            <div class="ds-line ds-kw">};</div>
+            <div class="ds-line">&nbsp;</div>
+            <div class="ds-line ds-kw">int <span class="ds-fn">main</span>() {</div>
+            <div class="ds-line">  <span class="ds-type">unsigned char</span> key;</div>
+            <div class="ds-line">  scanf(<span class="ds-str">"%x"</span>, &amp;key);</div>
+            <div class="ds-line">&nbsp;</div>
+            <div class="ds-line">  <span class="ds-kw">for</span> (i = 0; i &lt; <span class="ds-num">38</span>; i++) {</div>
+            <div class="ds-line">    putchar(enc[i] <span class="ds-op">^</span> key);  <span class="ds-dim">// ← XOR each byte</span></div>
+            <div class="ds-line">  }</div>
+            <div class="ds-line">}</div>
+          </div>
+        </div>
+
+        <!-- Entropy -->
+        <div class="dasm-panel" id="panel-entropy">
+          <div class="dasm-label">// Frequency analysis — most common byte in encrypted buffer</div>
+          <div class="dasm-content">
+            <div class="ds-line">Encrypted buffer (38 bytes):</div>
+            <div class="entropy-bars" id="entropy-bars"><!-- generated by JS --></div>
+            <div class="ds-line" style="margin-top:.8rem">Analysis:</div>
+            <div class="ds-line ds-hi">→ Most frequent byte: <span id="top-byte">0x69</span> (appears 5×)</div>
+            <div class="ds-line ds-dim">→ In English text, '_' and 'e' are common in flags</div>
+            <div class="ds-line">→ If top cipher byte = XOR of most frequent plaintext char:</div>
+            <div class="ds-line ds-hi">→ key guess: 0x69 XOR '_'(0x5f) = <span style="color:var(--accent2)">0x36</span> ... or try 0x69 XOR '3'(0x33) = <span style="color:var(--accent)">0x5a</span> ✓</div>
+            <div class="ds-note" style="margin-top:.5rem">// Brute-force is only 256 tries — scroll to Brute Force section!</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Brute Force -->
+      <div class="sec-divider"><h3>Brute Force All 256 Keys</h3></div>
+      <div class="brute-card">
+        <p class="brute-desc">Try all 256 possible XOR keys and look for the output that contains only readable ASCII. Only one key will produce coherent English text.</p>
+        <div class="brute-controls">
+          <button class="btn btn-primary" id="btn-brute" onclick="startBrute()">⚡ Brute Force (0x00 → 0xFF)</button>
+          <div class="brute-filter-wrap">
+            <label class="bf-label"><input type="checkbox" id="filter-printable" checked onchange="renderBruteResults()"/> Show printable-only results</label>
+          </div>
+        </div>
+        <div class="brute-progress hidden" id="brute-progress">
+          <div class="bp-bar-wrap"><div class="bp-bar" id="bp-bar" style="width:0%"></div></div>
+          <div class="bp-status" id="bp-status">Running…</div>
+        </div>
+        <div class="brute-results-wrap hidden" id="brute-results-wrap">
+          <div class="br-header">
+            <span class="br-hdr-label">// RESULTS <span id="br-count"></span></span>
+            <span class="tag tag-amber" id="br-done-tag" style="display:none">COMPLETE</span>
+          </div>
+          <div class="brute-results" id="brute-results"></div>
+        </div>
+      </div>
+
+      <!-- Flag reveal -->
+      <div id="flag-reveal" class="flag-reveal hidden">
+        <div class="fr-glow"></div>
+        <div class="fr-icon">⚙️</div>
+        <h2 class="fr-title">Binary Reversed!</h2>
+        <p class="fr-sub">Single-byte XOR is trivially broken — 256 attempts maximum. Always use proper encryption.</p>
+        <div class="fr-box">
+          <span class="fr-lbl">🚩 RECOVERED FLAG</span>
+          <code class="fr-val" id="fr-val"></code>
+          <button class="btn-copy-sm" onclick="copyFlag()">📋 Copy</button>
+          <div class="copy-toast hidden" id="copy-toast">✓ Copied!</div>
+        </div>
+        <div class="fr-proof">
+          <div class="fp-row"><span class="fp-k">XOR Key</span><span class="fp-v fp-key">0x5A  ('Z'  =  90 decimal)</span></div>
+          <div class="fp-row"><span class="fp-k">Enc bytes</span><span class="fp-v fp-enc">38 bytes in .rodata section</span></div>
+          <div class="fp-row"><span class="fp-k">Operation</span><span class="fp-v fp-op">enc[i] XOR 0x5A</span></div>
+          <div class="fp-row"><span class="fp-k">Plaintext</span><span class="fp-v fp-plain">FlagVault{x0r_k3y_r3v3rs3d_by_3ntr0py}</span></div>
+        </div>
+      </div>
+
+    </div><!-- /left -->
+
+    <!-- ══════ RIGHT ══════ -->
+    <div class="xrev-right">
+
+      <div class="sec-divider"><h3>Challenge Info</h3></div>
+      <div class="info-panel">
+        <div class="info-row"><span class="info-key">Binary</span><span class="tag tag-red">ELF 64-bit stripped</span></div>
+        <div class="info-row"><span class="info-key">Cipher</span><span class="tag tag-amber">Single-Byte XOR</span></div>
+        <div class="info-row"><span class="info-key">Key space</span><code>256 (0x00–0xFF)</code></div>
+        <div class="info-row"><span class="info-key">Category</span><span class="tag tag-green">Rev / Crypto</span></div>
+        <div class="info-row"><span class="info-key">Points</span><span style="color:var(--accent);font-family:var(--font-hud)">200</span></div>
+      </div>
+
+      <div class="sec-divider"><h3>Background</h3></div>
+      <div class="desc-block">
+        <p>The binary stores the flag as an encrypted byte array in its <code>.rodata</code> section. On startup it XORs each byte with a key you supply and prints the result.</p>
+        <br/>
+        <p>Single-byte XOR has only 256 possible keys. You can brute-force all of them in milliseconds — or use frequency analysis to guess the key from the cipher bytes alone.</p>
+      </div>
+
+      <!-- Attack approaches -->
+      <div class="sec-divider"><h3>Attack Approaches</h3></div>
+      <div class="approach-list">
+        <div class="ap-item">
+          <div class="ap-num">A</div>
+          <div class="ap-txt"><strong>Brute Force</strong><br/>Try keys 0x00–0xFF. Check which output is printable ASCII. Only 256 attempts.</div>
+        </div>
+        <div class="ap-item">
+          <div class="ap-num">B</div>
+          <div class="ap-txt"><strong>Frequency Analysis</strong><br/>The most common cipher byte XORed with the most common plaintext char ('_' or 'e') approximates the key.</div>
+        </div>
+        <div class="ap-item">
+          <div class="ap-num">C</div>
+          <div class="ap-txt"><strong>Known-Plaintext</strong><br/>Flags start with <code>FlagVault{</code> — XOR first byte 0x1c with 'F' (0x46) gives key 0x5a instantly.</div>
+        </div>
+        <div class="ap-item ap-best">
+          <div class="ap-num">D</div>
+          <div class="ap-txt"><strong>Static Analysis</strong><br/>Use <code>strings</code>, <code>xxd</code>, Ghidra, or radare2 to extract the encrypted buffer, then run approach A/B/C offline.</div>
+        </div>
+      </div>
+
+      <!-- Known-plaintext quick solve -->
+      <div class="sec-divider"><h3>Known-Plaintext Shortcut</h3></div>
+      <div class="kpt-card">
+        <div class="kpt-label">// Flags always start with "FlagVault{"</div>
+        <div class="kpt-row"><span class="kpt-k">First enc byte</span><span class="kpt-v kpt-enc">0x1c</span></div>
+        <div class="kpt-row"><span class="kpt-k">'F' (ASCII)</span><span class="kpt-v kpt-plain">0x46</span></div>
+        <div class="kpt-sep">→</div>
+        <div class="kpt-row"><span class="kpt-k">0x1c XOR 0x46</span><span class="kpt-v kpt-result">= 0x5a = 'Z' ← key!</span></div>
+        <div class="kpt-note">XOR is its own inverse: enc[0] XOR plain[0] = key</div>
+      </div>
+
+      <!-- Tools section -->
+      <div class="sec-divider"><h3>Recommended Tools</h3></div>
+      <div class="tools-list">
+        <div class="tool-item"><span class="tool-name">Ghidra</span><span class="tool-desc">NSA's free decompiler — imports ELF, shows pseudocode</span></div>
+        <div class="tool-item"><span class="tool-name">radare2</span><span class="tool-desc"><code>r2 -A ./xor_me</code> → <code>aaa; pdf @main</code></span></div>
+        <div class="tool-item"><span class="tool-name">ltrace</span><span class="tool-desc">Trace library calls to see printf output live</span></div>
+        <div class="tool-item"><span class="tool-name">xxd</span><span class="tool-desc">Dump binary to hex: <code>xxd xor_me | less</code></span></div>
+        <div class="tool-item"><span class="tool-name">strings</span><span class="tool-desc">Extract printable strings: <code>strings -n 4 xor_me</code></span></div>
+        <div class="tool-item"><span class="tool-name">Python</span><span class="tool-desc">Extract enc array, brute all keys in a loop</span></div>
+      </div>
+
+      <!-- Python solve script -->
+      <div class="sec-divider"><h3>Python Solve Script</h3></div>
+      <div class="code-block">
+        <div class="cb-lbl">// solve.py</div>
+        <pre class="cb-pre"># Extracted from binary's .rodata section
+enc = bytes([
+    0x1c, 0x36, 0x3b, 0x3d, 0x0c, 0x3b, 0x2f, 0x36,
+    0x2e, 0x21, 0x22, 0x6a, 0x28, 0x05, 0x31, 0x69,
+    0x23, 0x05, 0x28, 0x69, 0x2c, 0x69, 0x28, 0x29,
+    0x69, 0x3e, 0x05, 0x38, 0x23, 0x05, 0x69, 0x34,
+    0x2e, 0x28, 0x6a, 0x2a, 0x23, 0x27
+])
+
+# Known-plaintext: first byte must be 'F' (0x46)
+key = enc[0] ^ ord('F')
+print(f"Key: 0x{key:02x}")
+
+# Decrypt
+flag = bytes([b ^ key for b in enc]).decode()
+print(f"Flag: {flag}")</pre>
+      </div>
+
+      <!-- Hints -->
+      <div class="sec-divider"><h3>Hints</h3></div>
+      <div class="hints-list">
+        <div class="hint-card">
+          <div class="hint-header" onclick="toggleHint(1)"><span>💡 HINT 1</span><span class="hint-cost tag tag-green">−20 pts</span><span class="hint-toggle" id="h1t">▼ Reveal</span></div>
+          <div class="hint-body hidden" id="h1b">Run <code>strings ./xor_me</code>. Notice there's no plaintext flag — it's stored encrypted. The binary decrypts it when you supply the correct key via stdin. Use the brute-force tool above to try all 256 keys at once.</div>
+        </div>
+        <div class="hint-card">
+          <div class="hint-header" onclick="toggleHint(2)"><span>💡 HINT 2</span><span class="hint-cost tag tag-red">−40 pts</span><span class="hint-toggle" id="h2t">▼ Reveal</span></div>
+          <div class="hint-body hidden" id="h2b">Every CTF flag starts with a known prefix — <code>FlagVault{</code>. XOR the first encrypted byte (0x1c) with the first expected plaintext byte ('F' = 0x46). The result is the key.</div>
+        </div>
+        <div class="hint-card">
+          <div class="hint-header" onclick="toggleHint(3)"><span>💡 HINT 3</span><span class="hint-cost tag tag-purple">−60 pts</span><span class="hint-toggle" id="h3t">▼ Reveal</span></div>
+          <div class="hint-body hidden" id="h3b">Key = 0x1c XOR 0x46 = <strong>0x5a</strong>. Enter <code>5a</code> into the binary or the simulator above. The decrypted output is the flag — submit it wrapped in FlagVault{…}.</div>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="sec-divider"><h3>Submit Flag</h3></div>
+      <div class="flag-submit-panel">
+        <div class="form-group flag-input-wrap">
+          <span class="flag-prefix">FlagVault{</span>
+          <input class="form-control" id="flag-input" type="text" placeholder="your_flag_here" autocomplete="off"/>
+        </div>
+        <button class="btn btn-primary" onclick="submitFlag()" style="width:100%">&gt;_ SUBMIT FLAG</button>
+        <div class="submit-result" id="flag-result"></div>
+      </div>
+
+    </div><!-- /right -->
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-brand">FLAG<span>VAULT</span> CTF</div>
+  <div class="footer-copy">Challenge #R1 · Reverse Engineering · Single-Byte XOR</div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
